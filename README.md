@@ -11,10 +11,14 @@
 ## Step 0: Enable billing
 
 Billing is associated with projects.  You need to create a new project
-and attach a billing account to it.  I created one called CUSSW and
+and [attach a billing account to it][gcp-billing]; you can do this by
+clicking the hamburger menu in the upper left corner and going to the
+"billing" entry.  I created a project called CUSSW and
 associated the CUSSW billing account to it.  This takes a moment to
 set up.  Once you have the account enabled, go to that page on the
-console
+console.
+
+[gcp-billing]: https://support.google.com/cloud/answer/6288653?hl=en
 
 ## Step 1: Setting up a simple VM
 
@@ -35,52 +39,55 @@ Shutdown.
 
 Let's create a new instance and SSH into it.  Note that we automatically have
 root access when we use the cloud SSH.  This time, I am going to create
-something using Ubuntu.
+something using Debian.  I will use the default settings, except that I
+would like to enable the compute API at least at the "read-only" level
+so that any one of the machines can list all the active instances in the
+project.
 
-I prefer Anaconda to the built-in Python distribution, so I am going to start
-by installing Anaconda.  I ssh into my instance and type:
+The `setup.sh` script in the repository sets up an instance that is
+ready for use in a cluster with Python, Julia, or MPI.  The setup script
+does two things: it installs a bunch of software, and it sets the SSH
+settings to be a little more friendly to us.  In particular, we
 
-    wget https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh
-    bash Anaconda3-4.2.0-Linux-x86_64.sh
+ - Turn off strict host key checking, so that we are not prompted to
+   accept a key the first time we log into any particular node.
+ - Create a new `id_rsa.pub` key and install it in the list of
+   authorized keys.
 
-I will use the default location.  It takes a moment to install all the
-dependencies.  Note that MKL is included!  I let it update my bashrc, and
-then source the bashrc file to make it immediately available.  Then let's
-make sure that I have Jupyter installed:
+The second step may be somewhat fruitless, since GCP behind the scenes
+does some black magic to manage SSH keys for us.  Nonetheless, I had
+trouble getting SSH between instances to work consistently without doing
+something like this.
 
-    conda install ipython-notebook
+To do the installation, we run
 
-I am also going to install Julia:
+    sudo apt-get install -y git
+    git clone https://github.com/cornell-ssw/gcp-tutorial.git
+    cd gcp-tutorial
+    ./setup.sh
 
-    sudo add-apt-repository ppa:staticfloat/juliareleases
-    sudo add-apt-repository ppa:staticfloat/julia-deps
-    sudo apt-get update
-    sudo apt-get install julia
-
-You may notice that the installations go blazingly fast -- this is an
-advantage of running inside of Google's cloud.  They apparently have
-local mirrors of lots of things (and really high bandwidth if they do
-not have a local mirror).  First, we need to make sure that ZeroMQ is
-installed:
-
-    sudo apt-get install libzmq3-dev
-
-Let's make sure that IJulia and PyPlot are also installed; start Julia and run
-
-    Pkg.update()
-    Pkg.add("IJulia")
-    Pkg.add("PyPlot")
+Agree to things as prompted, and at the end, you should have a
+reasonable setup!
 
 ## Step 3: Start a Jupyter notebook
 
-From a terminal, we are going to start an SSH tunnel:
+So far, we have seen how to log into an instance with SSH, but we would
+like to interact with our remote machine in other ways as well; for
+example, we might like to display a web page that is rendered on the
+remote machine.  One technique for doing this is to set up an
+*SSH tunnel* that connects a port on our local machine to a port on
+some Google Compute Engine instance.
 
-    gcloud compute ssh instance-3 --zone=us-east1-c -- \
+From a terminal, we can start an SSH tunnel like this:
+
+    gcloud compute ssh david_bindel@instance-1 --zone=us-east1-c -- \
       -L 8888:localhost:8888
 
-If this is your first time using gcloud compute ssh, you will need to
-set up a key (straightforward).  This ssh command opens a terminal on
-the remote host, from which you can type
+where you will, of course, want to substitute your own user ID and
+instance name.  If this is your first time using gcloud compute ssh,
+you will need to set up a key when prompted.  This ssh command connects
+port 8888 on my local host to port 8888 on the remote machine.
+It also opens a terminal on the remote host, from which you can type
 
     jupyter notebook
 
@@ -106,30 +113,32 @@ To do this, I click on the instance, scroll down to the drive, and click
 the "create snapshot" button.  It takes just a little bit.  Now when I go
 to create a new instance, I can select the snapshot as my boot disk.
 
-I am going to start both `instance-3` and `instance-4` simultaneously.
-I will log into the former instance from my machine as
+Now, I would like to show off how to use these to instances as a tiny
+Julia compute cluster.  I will log into one of the machines with the
+web SSH, and from the terminal type
 
-    gcloud compute ssh instance-3 --zone=us-east1-c -- -L 8888:localhost:8888
+    gcp-tutorial/mkhostfile.sh
 
-I could start up a new Jupyter notebook, but first I will check my ssh
-keys by logging into `instance-4` from `instance-3`.
+This should create a file in the home directory called `machines.txt`
+that lists the name of all the instances currently running in the
+project.  We can run workers on all these machines by typing
 
-    ssh instance-4
+    julia --machinefile machines.txt
 
-This checks to make sure I want to continue, but nothing else.  I exit out,
-as I just wanted to make sure the key setup was correct.  Now let me start
-the Jupyter notebook:
+Now from the Julia prompt, we see where things are running via the loop
 
-    jupyter notebook
+    @parallel for i = 1:10
+        run(`hostname`)
+    end
 
-and in the notebook, I will run
+This should print out the name of the instance where each iteration
+of the for loop is run.
 
-    addprocs(["instance-4"])
+## Onward!
 
-We could also have specified the machines with a machine file.  That is,
-we would write a file `machines.txt` containing something like
+Some of the setup in this tutorial was taken from
+a [related tutorial on GitHub][mpi-cluster].  The nice thing about
+that tutorial, which we have not discussed here, is that it describes
+how to automate the whole process of spinning up a small cluster.
 
-    localhost
-    instance-4
-
-I think?  Except that what is actually happening is that
+[mpi-cluster]: https://github.com/NAThompson/mpi_clustering
