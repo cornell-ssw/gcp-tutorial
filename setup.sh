@@ -1,6 +1,9 @@
 # Make sure all packages are up-to-date
 sudo apt-get update -y
 
+# Set up git
+sudo apt-get install -y git
+
 # Set up essentials and some compilers
 sudo apt-get install -y build-essential
 sudo apt-get install -y gcc gfortran
