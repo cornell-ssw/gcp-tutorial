@@ -15,6 +15,7 @@ sudo apt-get install -y libzmq3-dev
 echo "StrictHostKeyChecking no" | sudo tee --append /etc/ssh/ssh_config
 echo "HashKnownHosts No" >> $HOME/.ssh/config
 ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -N '' -C "MPI Keys"
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
 # Install OpenMPI
 sudo apt-get install -y libopenmpi-dev openmpi-bin
