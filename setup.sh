@@ -34,7 +34,7 @@ tar -xzf julia-0.5.0-linux-x86_64.tar.gz -C $HOME
 JULIA=`ls $HOME | grep julia-`
 echo $JULIA
 export PATH=$HOME/$JULIA/bin:$PATH
-echo "export PATH=$HOME/$JULIA/bin:\$PATH" >> ~/.bashrc
+echo "export PATH=\"$HOME/$JULIA/bin:\$PATH\"" >> ~/.bashrc
 
 # Set up some Julia packages
 julia setup.jl
