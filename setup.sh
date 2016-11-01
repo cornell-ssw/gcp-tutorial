@@ -9,7 +9,7 @@ sudo apt-get install -y gcc gfortran
 sudo apt-get install -y libzmq3-dev
 
 # Turn off strict host key checks and create a shared key (for cloned images)
-sudo echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+echo "StrictHostKeyChecking no" | sudo tee --append /etc/ssh/ssh_config
 echo "HashKnownHosts No" >> $HOME/.ssh/config
 ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -N '' -C "MPI Keys"
 
@@ -28,7 +28,8 @@ wget https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.0-linux-x86_
 tar -xzf julia-0.5.0-linux-x86_64.tar.gz -C $HOME
 
 # Add Julia to the path (and the default path)
-JULIA=`ls $HOME/julia-*`
+JULIA=`ls $HOME | grep julia-`
+echo $JULIA
 export PATH=$HOME/$JULIA/bin:$PATH
 echo "export PATH=$HOME/$JULIA/bin:\$PATH" >> ~/.bashrc
 
